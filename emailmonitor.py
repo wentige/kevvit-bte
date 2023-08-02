@@ -11,7 +11,6 @@ def get_last_run_timestamp():  # Get the last date and time that emailmonitor.py
     try:
         with open("emailmonitorlog.txt", "r") as file:
             timestamp_str = file.read().strip()
-            file.close()
             print("got:", timestamp_str)
             if timestamp_str == '': return None
             print("converting")
@@ -31,7 +30,6 @@ def save_current_timestamp():  # Save the current date and time to the emailmoni
     try:
         with open("emailmonitorlog.txt", "a") as log_file:
             log_file.write(timestamp_str + "\n")
-            log_file.close()
     except FileNotFoundError:
         print("emailmonitorlog.txt missing")
 
