@@ -153,7 +153,7 @@ for uid in uids[0].split():
         print(f"An error occured: {e}")
         conn.rollback()
     
-    if count >= 50: break      # Limit to this many emails to save
+    #if count >= 50: break      # Limit to this many emails to save
 
 if count == 0: print ("No new emails found.")
 
