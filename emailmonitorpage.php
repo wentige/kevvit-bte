@@ -53,7 +53,7 @@
 <h1>Inbox</h1>
 <br>
 
-		<table border="1">
+<table border="1">
     <tr style="background-color: #eee;">
       
       <th>Sender</th>
@@ -69,15 +69,15 @@
 	foreach ($info as $row){
 		
 	?>
-	<tr>
-        <td class="center" bgcolor="<?= $colour ?>"><?= $row[2] ?></td>
-        <td class="center" bgcolor="<?= $colour ?>"><?= $row[3] ?></td>
-		<?php
-		echo "<td class=\"center\" bgcolor=\" $colour\"><a href=\"view_email.php?id={$row[1]}\" target=\"_blank\">{$row[4]}</a></td>";
-		?>
-        <td class="center" bgcolor="<?= $colour ?>"><?= $row[6] ?></td>
+
+	<tr bgcolor="<?= $colour ?>">
+        <td class="center"><?= $row[2] ?></td>
+        <td class="center"><?= $row[3] ?></td>
+	<td class="center"><a href="view_email.php?id=<?= $row[1] ?>" target="_blank">{$row[4]}</a></td>
+        <td class="center"><?= $row[6] ?></td>
 	</tr>
-	<?php
+
+        <?php
 	}
 	
 	
