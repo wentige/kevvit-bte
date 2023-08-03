@@ -6,6 +6,7 @@ import MySQLdb  # pip install mysqlclient
 from dateutil.parser import parse # pip install python-dateutil
 import configparser
 import datetime
+import pytz  # pip install pytz
 from email.header import decode_header
 
 def get_last_run_timestamp():  # Get the last date and time that emailmonitor.py was executed
@@ -105,6 +106,7 @@ print("Saving emails received after:", from_date)
 status, uids = mail.uid("search", None, f'SINCE "{from_date}"')
 
 count = 0
+est_timezone = pytz.timezone("America/New_York")
 for uid in uids[0].split():
 
     status, msg_data = mail.uid("fetch", uid, "(RFC822)")
@@ -122,11 +124,12 @@ for uid in uids[0].split():
     senderaddr = email_from[start_bracket + 1:end_bracket]
 
 
-    # Parse date into SQL datetime format
+    # Parse date into SQL datetime format and EST timezone
     if email_date is not None:
         email_date = email_date.split(" (")[0]
         parsed_datetime = parse(email_date)
-        email_date = parsed_datetime.strftime("%Y-%m-%d %H:%M:%S")
+        parsed_datetime_est = parsed_datetime.astimezone(est_timezone)
+        email_date = parsed_datetime_est.strftime("%Y-%m-%d %H:%M:%S")
     
     email_body = get_email_body(email_message)
 
@@ -150,7 +153,7 @@ for uid in uids[0].split():
         print(f"An error occured: {e}")
         conn.rollback()
     
-    #if count >= 15: break      # Limit to this many emails to save
+    if count >= 50: break      # Limit to this many emails to save
 
 if count == 0: print ("No new emails found.")
 
