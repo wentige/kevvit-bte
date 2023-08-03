@@ -1,5 +1,6 @@
 import imaplib
 import email
+import os
 import chardet  # pip install chardet
 import MySQLdb  # pip install mysqlclient
 from dateutil.parser import parse # pip install python-dateutil
@@ -9,29 +10,29 @@ from email.header import decode_header
 
 def get_last_run_timestamp():  # Get the last date and time that emailmonitor.py was executed
     try:
-        with open("emailmonitorlog.txt", "r") as file:
-            timestamp_str = file.read().strip()
-            file.close()
-            print("got:", timestamp_str)
-            if timestamp_str == '': return None
-            print("converting")
-            parsed_datetime = parse(timestamp_str)
-            formatted_date = parsed_datetime.strftime("%d-%b-%Y")
-            print("converted:", formatted_date)
-            return formatted_date
+        # Seek the last line of emailmonitorlog.txt to find the last execution date
+        with open('emailmonitorlog.txt', 'rb') as f:
+            try:  # catch OSError in case of a one line file 
+                f.seek(-2, os.SEEK_END)
+                while f.read(1) != b'\n':
+                    f.seek(-2, os.SEEK_CUR)
+            except OSError:
+                f.seek(0)
+            timestamp_str = f.readline().decode()
+        if timestamp_str == '': return None
+        parsed_datetime = parse(timestamp_str)
+        formatted_date = parsed_datetime.strftime("%d-%b-%Y")
+        return formatted_date
     except FileNotFoundError:
         return None
     
 def save_current_timestamp():  # Save the current date and time to the emailmonitorlog.txt after exectuting
     current_timestamp = datetime.datetime.now()
-    print(current_timestamp)
     timestamp_str = current_timestamp.strftime("%m-%d-%Y %H:%M:%S")
-    print(timestamp_str)
     # Append the current timestamp to the log file
     try:
         with open("emailmonitorlog.txt", "a") as log_file:
             log_file.write(timestamp_str + "\n")
-            log_file.close()
     except FileNotFoundError:
         print("emailmonitorlog.txt missing")
 
@@ -83,7 +84,12 @@ db_config = {
     "database": config.get("database", "database")
 }
 
-conn = MySQLdb.connect(**db_config)
+try:
+    conn = MySQLdb.connect(**db_config)
+except MySQLdb.OperationalError:
+    print("Can't connect to the database server")
+    exit(1)
+
 cursor = conn.cursor()
 
 mail = imaplib.IMAP4_SSL(imap_server)
@@ -95,7 +101,7 @@ if from_date is None:
     from_date = "01-Jan-1970"
 
 
-print("Saving emails sent after:", from_date)
+print("Saving emails received after:", from_date)
 status, uids = mail.uid("search", None, f'SINCE "{from_date}"')
 
 count = 0
@@ -132,11 +138,19 @@ for uid in uids[0].split():
     data = (email_id, sendername, senderaddr, email_subject, email_body, email_date)
 
     # Execute the INSERT query
-    cursor.execute(sql, data)
-    conn.commit()
-    print("Saved (", email_id, ")", count, " - ", sendername, " | ", senderaddr, " | ", email_date, " | ", email_subject[:20], "... | ", email_body.replace("\n", " ")[:20], "...")
-    count += 1
-    if count >= 5: break # Limit to this many emails to save
+    try:
+        cursor.execute(sql, data)
+        affected_rows = cursor.rowcount
+        conn.commit()
+
+        if affected_rows > 0:
+            count += 1
+            print("Saved (", count, ") - ", sendername, " | ", senderaddr, " | ", email_date, " | ", email_subject[:20], "... | ", email_body.replace("\n", " ")[:20], "...")
+    except Exception as e:
+        print(f"An error occured: {e}")
+        conn.rollback()
+    
+    #if count >= 15: break      # Limit to this many emails to save
 
 if count == 0: print ("No new emails found.")
 
